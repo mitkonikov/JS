@@ -55,13 +55,14 @@
         // Create some defaults, extending them with any options that were provided
         options = $.extend({
             scaleDown: true,
-            scaleDownFactor: 0.9,     // 0 - 1 (float range)
-            scaleDownDuration: 200,   // NEEDS WORK
-            translateFactor: 300,     // in px
-            slideWidth: 15.75,        // in em
+            scaleDownFactor: 0.9,                           // 0 - 1 (float range)
+            scaleDownDuration: 200,                         // NEEDS WORK
+            translateFactor: false,                         // in px
+            slideWidth: 15.75,                              // in em
             mainDuration: 500,
             fadeInDelay: 200,
-            fadeInOut: true
+            fadeInOut: true,
+            easing: "linear"                                // NEEDS WORK
         }, options);
 
         var isTouchDevice = navigator.userAgent.match(/(iPhone|iPod|iPad|Android|playbook|silk|BlackBerry|BB10|Windows Phone|Tizen|Bada|webOS|IEMobile|Opera Mini)/);
@@ -73,6 +74,10 @@
             'width': options.slideWidth + 'em'
         });
 
+        if (options.translateFactor == false) {
+            options.translateFactor = $("#sit-section").width();
+        }
+
         /** 
          * SlideIt is the main function that animates the sliding between `slide1` and `slide2` 
          * @param {slide1} slide1 The first slide (string)
@@ -82,96 +87,109 @@
             var settings = {
                 duration: options.mainDuration, 
                 queue: false, 
-                easing: "linear"
+                easing: options.easing
             }
 
             if (!options.scaleDown) options.scaleDownFactor = 1;
 
         	if (slide2 > slide1) {
-                // TRANSLATE
-                positionSecondSlide(slide2, SIDE_RIGHT);
-
-                // 1. SCALED DOWN
-                // 2. TRANSLATED WHILE FADE OUT
-                if (options.scaleDown) {
-                    $(SLIDE_ID_SEL + slide1).animate({ scale:  1.00 - options.scaleDownFactor },
-                        { step: function(now, fx) {
-                            SCALE(this, 1.00 - now);
-                        }, duration: options.scaleDownDuration
-                    });
-                }
-                
-                $(SLIDE_ID_SEL + slide1).animate({ translate: -options.translateFactor },
-                    { step: function(now, fx) {
-                        TRANSFORM(this, options.scaleDownFactor, options.scaleDownFactor, now, 0);
-                    }}, settings
-                );
-                
-                hideSlide(slide1);
-                
-                setTimeout(function() {
-                    showSlide(slide2);
-
-                    $(SLIDE_ID_SEL + slide2).animate({ translate: options.translateFactor },
-                        { 
-                            step: function(now, fx) {
-                                TRANSFORM(this, options.scaleDownFactor, options.scaleDownFactor, (options.translateFactor - now), 0);
-                            }
-                        }, settings
-                    );
-                    
-                    if (options.scaleDown) {
-                        $(SLIDE_ID_SEL + slide2).animate({ scale: (1.00 - options.scaleDownFactor) },
-                            { step: function(now, fx) {
-                                SCALE(this, (options.scaleDownFactor + now));
-                            }, duration: options.scaleDownDuration
-                        });
-                    }
-                }, options.fadeInDelay);
-            
+                slideRight(slide1, slide2, settings)
             } else if (slide1 > slide2) {
-                // TRANSLATE
-                positionSecondSlide(slide2, SIDE_LEFT);
-            
-                // 1. SCALED DOWN
-                if (options.scaleDown) {
-                    $(SLIDE_ID_SEL + slide1).animate({ scale: (1.00 - options.scaleDownFactor) },
-                        { step: function(now, fx) {
-                            SCALE(this, 1.00-now);
-                        }, duration: options.scaleDownDuration
-                    });
-                }
-                
-                // 2. TRANSLATED WHILE FADE OUT
-                $(SLIDE_ID_SEL + slide1).animate({ translate: options.translateFactor },
-                    { step: function(now, fx) {
-                        TRANSFORM(this, options.scaleDownFactor, options.scaleDownFactor, now, 0);
-                    }}, settings
-                );
-                
-                hideSlide(slide1);
-                
-                setTimeout(function() {
-                    showSlide(slide2);
+                slideLeft(slide1, slide2, settings)
+            }
+        }
 
-                    $(SLIDE_ID_SEL + slide2).animate({ translate: options.translateFactor },
-                        { step: 
-                            function(now, fx) {
-                                TRANSFORM(this, options.scaleDownFactor, options.scaleDownFactor, (-options.translateFactor + now), 0);
-                            }
-                        }, settings
-                    );
-                    
-                    if (options.scaleDown) {
-                        $(SLIDE_ID_SEL + slide2).animate({ scale: (1.00 - options.scaleDownFactor) },
-                            { step: function(now, fx) {
-                                SCALE(this, (options.scaleDownFactor + now));
-                            }, duration: options.scaleDownDuration
-                        });
-                    }
-                }, options.fadeInDelay);
+        function slideRight(slide1, slide2, settings) {
+            // TRANSLATE
+            positionSecondSlide(slide2, SIDE_RIGHT);
+
+            // 1. SCALED DOWN
+            // 2. TRANSLATED WHILE FADE OUT
+            if (options.scaleDown) {
+                $(SLIDE_ID_SEL + slide1).animate({ scale:  1.00 - options.scaleDownFactor },
+                    { step: function(now, fx) {
+                        SCALE(this, 1.00 - now);
+                    }, duration: options.scaleDownDuration
+                });
             }
             
+            $(SLIDE_ID_SEL + slide1).animate({ translate: -options.translateFactor },
+                { step: function(now, fx) {
+                    TRANSFORM(this, options.scaleDownFactor, options.scaleDownFactor, now, 0);
+                }}, settings
+            );
+            
+            hideSlide(slide1);
+
+            if (options.scaleDown) {
+                setTimeout(() => showSecondSlide(slide2, settings, SIDE_RIGHT), options.fadeInDelay)
+            } else {
+                showSecondSlide(slide2, settings, SIDE_RIGHT);
+            }
+            
+            if (options.scaleDown) {
+                setTimeout(function() {
+                    $(SLIDE_ID_SEL + slide2).animate({ scale: (1.00 - options.scaleDownFactor) },
+                        { step: function(now, fx) {
+                            SCALE(this, (options.scaleDownFactor + now));
+                        }, duration: options.scaleDownDuration
+                    });
+                }, options.fadeInDelay);
+            }
+        }
+
+        function slideLeft(slide1, slide2, settings) {
+            // TRANSLATE
+            positionSecondSlide(slide2, SIDE_LEFT);
+            
+            // 1. SCALED DOWN
+            if (options.scaleDown) {
+                $(SLIDE_ID_SEL + slide1).animate({ scale: (1.00 - options.scaleDownFactor) },
+                    { step: function(now, fx) {
+                        SCALE(this, 1.00-now);
+                    }, duration: options.scaleDownDuration
+                });
+            }
+            
+            // 2. TRANSLATED WHILE FADE OUT
+            $(SLIDE_ID_SEL + slide1).animate({ translate: options.translateFactor },
+                { step: function(now, fx) {
+                    TRANSFORM(this, options.scaleDownFactor, options.scaleDownFactor, now, 0);
+                }}, settings
+            );
+            
+            hideSlide(slide1);
+            
+            if (options.scaleDown) {
+                setTimeout(() => showSecondSlide(slide2, settings, SIDE_LEFT), options.fadeInDelay)
+            } else {
+                showSecondSlide(slide2, settings, SIDE_LEFT);
+            }
+
+            if (options.scaleDown) {
+                setTimeout(function() {
+                    $(SLIDE_ID_SEL + slide2).animate({ scale: (1.00 - options.scaleDownFactor) },
+                        { step: function(now, fx) {
+                            SCALE(this, (options.scaleDownFactor + now));
+                        }, duration: options.scaleDownDuration
+                    });
+                }, options.fadeInDelay);
+            }
+        }
+
+        function showSecondSlide(slide, settings, SIDE) {
+            showSlide(slide);
+
+            $(SLIDE_ID_SEL + slide).animate({ translate: options.translateFactor },
+                { 
+                    step: function(now, fx) {
+                        if (SIDE == SIDE_RIGHT)
+                            TRANSFORM(this, options.scaleDownFactor, options.scaleDownFactor, (options.translateFactor - now), 0);
+                        else
+                            TRANSFORM(this, options.scaleDownFactor, options.scaleDownFactor, (-options.translateFactor + now), 0);
+                    }
+                }, settings
+            );
         }
 
         function hideSlide(slide) {
